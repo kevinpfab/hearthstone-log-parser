@@ -20,6 +20,7 @@ class Card(BaseModel):
         self.elite = False
 
         if card_data:
+            self._raw_data = card_data
             self._set_card_data(card_data)
 
     def _set_card_data(self, data):
@@ -27,8 +28,13 @@ class Card(BaseModel):
             if key != 'id':
                 setattr(self, key, data[key])
 
+    def raw_data(self):
+        return self._raw_data
+
 class CardInstance(Card):
-    pass
+
+    def __init__(self, base_card):
+        super(CardInstance, self).__init__(base_card.id, card_data=base_card.raw_data())
 
 class CardDatabase(BaseModel):
 
@@ -37,6 +43,11 @@ class CardDatabase(BaseModel):
 
     def get_card(self, card_id):
         return self._database.get(card_id)
+
+    def create_instance(self, card_id):
+        return CardInstance(
+            self.get_card(card_id)
+        )
 
     def _parse_data(self, data):
         card_database = {}

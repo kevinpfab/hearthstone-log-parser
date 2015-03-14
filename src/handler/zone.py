@@ -24,8 +24,6 @@ class CardToPlay(ZoneHandler):
         ]
 
     def  _execute(self, method, data):
-        card = CardInstance(data['localTrigger']['entity']['cardId'])
-        card.name = self._database.get_card(card.id).name
-
+        card = self._database.create_instance(data['localTrigger']['entity']['cardId'])
         self._match.current_turn.cards_played.append(card)
 
