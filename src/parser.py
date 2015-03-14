@@ -2,9 +2,11 @@
 import json
 
 class Tag:
-    PLAYER_ID   = 'PLAYER_ID'
-    TURN        = 'TURN'
-    TURN_START  = 'TURN_START'
+    PLAYER_ID      = 'PLAYER_ID'
+    TURN           = 'TURN'
+    TURN_START     = 'TURN_START'
+    RESOURCES_USED = 'RESOURCES_USED'
+    RESOURCES      = 'RESOURCES'
 
 class HearthstoneLogParser:
 
@@ -19,8 +21,10 @@ class HearthstoneLogParser:
         lines = [line.strip('\n') for line in open(self._file_path)]
 
         for line in lines:
-            if line.startswith('[Zone]') or line.startswith('[Power]'):
-                self._parse_line(line)
+            if line.startswith('[Zone]'):
+                self._parse_zone(line)
+            elif line.startswith('[Power]'):
+                self._parse_power(line)
 
         i = 0
         total_turn_time = {
@@ -33,6 +37,8 @@ class HearthstoneLogParser:
             if i < len(self.match.turns) - 1:
                 turn_time = self.match.turns[i+1].start - turn.start
                 print("Turn took %d seconds" % turn_time)
+                print("Spent %d mana" % turn.total_mana_used)
+                print("%s mana efficiency" % str(turn.total_mana_used/turn.mana_available))
 
                 if i > 1:
                     total_turn_time[turn.player.name] = total_turn_time[turn.player.name] + turn_time
@@ -46,8 +52,13 @@ class HearthstoneLogParser:
         for player_name, turn_time in total_turn_time.items():
             print("%s: %d" % (player_name, turn_time))
 
+    def _parse_zone(self, line):
+        pass
+#        if 'processing' in line:
+#            data = line.split('processing', 1)[1].strip()
+#            data = self._get_dict_from_string(data)
 
-    def _parse_line(self, line):
+    def _parse_power(self, line):
         # Tag Changes are useful for discovering turns and players
         if 'TAG_CHANGE' in line:
             tag_change = line.split('TAG_CHANGE', 1)[1].strip()
@@ -66,34 +77,70 @@ class HearthstoneLogParser:
                 self.match.current_turn.player = self.match.get_player_by_name(data['Entity'])
                 self.match.current_turn.start = int(data['value'])
 
+            elif data['tag'] == Tag.RESOURCES:
+                self.match.current_turn.set_mana_available(int(data['value']))
+            elif data['tag'] == Tag.RESOURCES_USED:
+                self.match.current_turn.total_mana_used = int(data['value'])
+
     # {{{ _get_dict_from_string
     def _get_dict_from_string(self, s):
         d = {}
 
-        last_char = s[-1]
-        pairs = s.count('=')
-        split_on_equals = s.split('=')
-
-        current_key = split_on_equals.pop(0)
-
-        if last_char != '=':
-            last_value = split_on_equals.pop()
-        else:
-            last_value = None
-
+        i = 0
+        resolved = False
+        current_word = ""
+        last_word = ""
+        previous_words = []
+        current_key = None
         current_value = None
-        for string in split_on_equals:
-            items = string.split(' ')
-            next_key = items.pop()
-            current_value = ' ' .join(items)
+        while not resolved:
+            c = s[i]
 
-            d[current_key] = current_value
-            current_key = next_key
+            if c == '=':
+                if current_key:
+                    value = ' '.join(previous_words)
+                    d[current_key] = value
 
-        d[current_key] = last_value
+                current_key = current_word
+                current_word = ""
+                previous_words = []
+            elif c == ' ':
+                previous_words.append(current_word)
+                last_word = current_word
+                current_word = ""
+            elif c == '[':
+                projected_string = s[(i+1):]
+                j = 1
+                k = 0
+                projected_resolved = False
+                while not projected_resolved:
+                    temp_c = projected_string[k]
+                    if temp_c == ']':
+                        j = j - 1
+                    elif temp_c == '[':
+                        j = j + 1
+
+                    k = k + 1
+                    if j == 0:
+                        projected_resolved = True
+
+                inside_braces = s[(i+1):(i+k)]
+                if len(inside_braces) > 0:
+                    d[current_key] = self._get_dict_from_string(inside_braces)
+                else:
+                    d[current_key] = ""
+                current_key = None
+
+                i = i + k
+            else:
+                current_word = current_word + c
+
+            i = i + 1
+
+            if i >= len(s):
+                resolved = True
 
         return d
-
     # }}}
 
 
@@ -157,9 +204,19 @@ class Turn:
         self.player = player
         self.start = start
 
+        self.mana_available = 0
+        self.current_mana = 0
+        self.total_mana_used = 0
+
+    def set_mana_available(self, mana):
+        self.mana_available = mana
+        self.current_mana = mana
+
 if __name__ == '__main__':
 
     card_database = json.loads(open('data/cards.json').read())
-    parser = HearthstoneLogParser("logs/game2.txt", card_database)
+    parser = HearthstoneLogParser("logs/2minions1turn.txt", card_database)
 
-    parser.parse()
+    test = parser._get_dict_from_string("id=1 changes=1 complete=False local=True localTrigger=[powerTask=[] entity=[name=Voidwalker id=29 zone=HAND zonePos=1 cardId=CS2_065 player=1] srcZoneTag=HAND srcPos=1 dstZoneTag=PLAY dstPos=1]")
+    print(test)
+    # parser.parse()
