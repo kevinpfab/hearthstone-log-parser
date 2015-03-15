@@ -76,6 +76,7 @@ class HearthstoneLogParser:
 if __name__ == '__main__':
 
     card_json = json.loads(open('data/cards.json').read())
-    parser = HearthstoneLogParser("logs/2minions1turn.txt", card_json)
+    #parser = HearthstoneLogParser("logs/2minions1turn.txt", card_json)
+    parser = HearthstoneLogParser("logs/game2.txt", card_json)
 
     parser.parse()

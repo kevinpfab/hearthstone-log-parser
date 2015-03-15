@@ -1,4 +1,6 @@
 
+from helpers import Helpers
+
 from base import BaseHandler
 from tag import ZoneTag
 
@@ -24,6 +26,9 @@ class CardToPlay(ZoneHandler):
         ]
 
     def  _execute(self, method, data):
-        card = self._database.create_instance(data['localTrigger']['entity']['cardId'])
+        entity = data['localTrigger']['entity']
+        card = self._database.create_instance(entity['id'], entity['cardId'])
         self._match.current_turn.cards_played.append(card)
+        self._match.entities[card.id] = card
+
 

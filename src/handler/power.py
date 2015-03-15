@@ -1,4 +1,6 @@
 
+from helpers import Helpers
+
 from base import BaseHandler
 from tag import PowerTag
 
@@ -13,7 +15,13 @@ class PowerHandler(BaseHandler):
     def _execute(self, data):
         pass
 
+class MetaDamage(PowerHandler):
 
+    def _tags(self):
+        return [PowerTag.META_DAMAGE]
+
+    def _execute(self, method, data):
+        self._match.attacking(damage=data['Data'])
 
 # Tag Change lines only have 1 tag that's associated via a "tag="
 # {{{ Tag Change Handlers
@@ -32,8 +40,26 @@ class CreatePlayer(TagChange):
         return PowerTag.PLAYER_ID
 
     def _execute(self, method, data):
-        new_player = Player(data['value'], data['Entity'])
-        self._match.set_player(new_player)
+        player = self._match.get_player_by_name(data['Entity'])
+        if not player:
+            player = Player(name=data['Entity'], entity_id=data['value'])
+            self._match.set_player(player)
+
+        player.player_id = data['value']
+
+class AssignPlayerEntity(TagChange):
+
+    def _tag(self):
+        return PowerTag.HERO_ENTITY
+
+    def _execute(self, method, data):
+        player = self._match.get_player_by_name(data['Entity'])
+        if not player:
+            player = Player(name=data['Entity'], entity_id=data['value'])
+            self._match.set_player(player)
+
+        player.entity_id = data['value']
+        self._match.entities[player.entity_id] = player
 
 class NewTurn(TagChange):
 
@@ -70,5 +96,24 @@ class ResourcesUsed(TagChange):
 
     def _execute(self, method, data):
         self._match.current_turn.total_mana_used = int(data['value'])
+
+class Attacking(TagChange):
+    def _tag(self):
+        return PowerTag.ATTACKING
+
+    def _execute(self, method, data):
+        if data['value'] == '1':
+            entity = self._match.entities[data['Entity']['id']]
+            self._match.attacking(attacking_entity=entity)
+
+class Defending(TagChange):
+    def _tag(self):
+        return PowerTag.DEFENDING
+
+    def _execute(self, method, data):
+        if data['value'] == '1':
+            entity = self._match.entities[data['Entity']['id']]
+            self._match.attacking(defending_entity=entity)
+
 
 # }}}

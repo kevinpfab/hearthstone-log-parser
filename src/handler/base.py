@@ -54,9 +54,12 @@ class BaseHandler(object):
         parts = no_base_tag.split('-', 1)
 
         d['method'] = parts[0].strip()
-        d['data'] = Helpers.get_dict_from_string(parts[1].strip())
+        d['data'] = self._parse_dict(parts[1].strip())
 
         return d
+
+    def _parse_dict(self, s):
+        return Helpers.get_dict_from_string(s)
 
     def _method(self):
         return None
@@ -66,3 +69,4 @@ class BaseHandler(object):
 
     def _execute(self, s):
         pass
+

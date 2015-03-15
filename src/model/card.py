@@ -31,10 +31,26 @@ class Card(BaseModel):
     def raw_data(self):
         return self._raw_data
 
-class CardInstance(Card):
+class CardInstance(object):
 
-    def __init__(self, base_card):
-        super(CardInstance, self).__init__(base_card.id, card_data=base_card.raw_data())
+    def __init__(self, instance_id, base_card):
+        self.id = instance_id
+        self.base_card = base_card
+
+        self.attack = base_card.attack
+        self.health = base_card.health
+
+    @property
+    def name(self):
+        return self.base_card.name
+
+class CardInstanceState(CardInstance):
+
+    @staticmethod
+    def from_card_instance(self, card_instance):
+        state = CardInstanceState(card_instance.id, card_instance.base_card)
+        state.attack = base_card.attack
+        state.health = base_card.health
 
 class CardDatabase(BaseModel):
 
@@ -44,8 +60,9 @@ class CardDatabase(BaseModel):
     def get_card(self, card_id):
         return self._database.get(card_id)
 
-    def create_instance(self, card_id):
+    def create_instance(self, instance_id, card_id):
         return CardInstance(
+            instance_id,
             self.get_card(card_id)
         )
 
